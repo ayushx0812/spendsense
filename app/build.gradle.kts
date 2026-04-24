@@ -64,7 +64,7 @@ dependencies {
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
-    implementation(libs.firebase.firestore)
+    implementation("com.google.firebase:firebase-firestore-ktx")
 
     // WorkManager for budget notifications
     implementation(libs.androidx.work.runtime.ktx)

@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "834851281214",
-    "project_id": "spendsence-2d342",
-    "storage_bucket": "spendsence-2d342.firebasestorage.app"
+    "project_number": "1063407716682",
+    "project_id": "spendsense-65e50",
+    "storage_bucket": "spendsense-65e50.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:834851281214:android:b47b75ac9c47175f43f46f",
-        "android_client_info": {
-          "package_name": "com.example.spendSence"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyD6IcgjgDOS_OABE_KrwiTaXzPfYtZTW90"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:834851281214:android:898a807b0e4a4be643f46f",
+        "mobilesdk_app_id": "1:1063407716682:android:ed4d4281ca6916755999b3",
         "android_client_info": {
           "package_name": "com.example.spendsence"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD6IcgjgDOS_OABE_KrwiTaXzPfYtZTW90"
+          "current_key": "AIzaSyC73RS4w6zGWLNJ_yB8HfpTXqaNlo6IP_M"
         }
       ],
       "services": {

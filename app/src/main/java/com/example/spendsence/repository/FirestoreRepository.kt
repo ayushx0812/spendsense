@@ -26,6 +26,12 @@ class FirestoreRepository {
     // By default, the workspace is the user's own UID.
     var currentWorkspaceId: String? = auth.currentUser?.uid
 
+    init {
+        auth.addAuthStateListener { firebaseAuth ->
+            currentWorkspaceId = firebaseAuth.currentUser?.uid
+        }
+    }
+
     // ─── Helper ──────────────────────────────────────────────────────────────
 
     private fun workspaceDoc() = currentWorkspaceId?.let {

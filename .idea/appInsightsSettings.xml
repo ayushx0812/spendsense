@@ -9,9 +9,9 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="com.example.spendsence" />
-                  <option name="mobileSdkAppId" value="1:834851281214:android:898a807b0e4a4be643f46f" />
-                  <option name="projectId" value="spendsence-2d342" />
-                  <option name="projectNumber" value="834851281214" />
+                  <option name="mobileSdkAppId" value="1:1063407716682:android:ed4d4281ca6916755999b3" />
+                  <option name="projectId" value="spendsense-65e50" />
+                  <option name="projectNumber" value="1063407716682" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
