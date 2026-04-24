@@ -68,4 +68,8 @@ dependencies {
 
     // WorkManager for budget notifications
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Biometric authentication
+    implementation(libs.androidx.biometric)
 }
+

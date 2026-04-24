@@ -1,10 +1,12 @@
 package com.example.spendsence.ui
 
+import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,6 +17,7 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Signup : Screen("signup")
     object Splash : Screen("splash")
+    object BiometricLock : Screen("biometric_lock")
     object Dashboard : Screen("dashboard")
     object MyFinances : Screen("my_finances")
     object Transactions : Screen("transactions")
@@ -50,15 +53,30 @@ fun AppNavigation(viewModel: AppViewModel) {
 
             // ── Splash ────────────────────────────────────────────────────────
             composable(Screen.Splash.route) {
+                val context = LocalContext.current
                 SplashScreen(onSplashFinished = {
-                    if (currentUser != null) {
-                        navController.navigate(Screen.MyFinances.route) {
+                    val isLoggedInUser = currentUser != null && currentUser?.isAnonymous == false
+                    val prefs = context.getSharedPreferences("spendsense_prefs", Context.MODE_PRIVATE)
+                    val biometricEnabled = prefs.getBoolean("biometric_lock_enabled", false)
+                    when {
+                        isLoggedInUser && biometricEnabled -> navController.navigate(Screen.BiometricLock.route) {
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
-                    } else {
-                        navController.navigate(Screen.Login.route) {
+                        isLoggedInUser -> navController.navigate(Screen.MyFinances.route) {
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
+                        else -> navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                })
+            }
+
+            // ── Biometric Lock ────────────────────────────────────────────────
+            composable(Screen.BiometricLock.route) {
+                BiometricLockScreen(onUnlocked = {
+                    navController.navigate(Screen.MyFinances.route) {
+                        popUpTo(Screen.BiometricLock.route) { inclusive = true }
                     }
                 })
             }

@@ -93,6 +93,10 @@ class AppViewModel(
         }
     }
 
+    fun deleteExpense(expenseId: String) {
+        viewModelScope.launch { firestoreRepository.deleteExpense(expenseId) }
+    }
+
     // ─── Incomes ──────────────────────────────────────────────────────────────
 
     val allIncomes: StateFlow<List<Income>> = _workspaceId.flatMapLatest { id ->
@@ -116,6 +120,10 @@ class AppViewModel(
         viewModelScope.launch {
             firestoreRepository.insertIncome(Income(amount = amount, source = source, dateMillis = dateMillis, note = note))
         }
+    }
+
+    fun deleteIncome(incomeId: String) {
+        viewModelScope.launch { firestoreRepository.deleteIncome(incomeId) }
     }
 
     // ─── Balance ──────────────────────────────────────────────────────────────
@@ -301,16 +309,18 @@ class AppViewModel(
 
     // ─── Auth ─────────────────────────────────────────────────────────────────
 
-    suspend fun login(email: String, pass: String): Boolean {
-        val success = authRepository.login(email, pass)
-        if (success) _workspaceId.value = authRepository.currentUser.value?.uid
-        return success
+    /** Returns null on success, or a human-readable error message on failure. */
+    suspend fun login(email: String, pass: String): String? {
+        val error = authRepository.login(email, pass)
+        if (error == null) _workspaceId.value = authRepository.currentUser.value?.uid
+        return error
     }
 
-    suspend fun signup(email: String, pass: String): Boolean {
-        val success = authRepository.signup(email, pass)
-        if (success) _workspaceId.value = authRepository.currentUser.value?.uid
-        return success
+    /** Returns null on success, or a human-readable error message on failure. */
+    suspend fun signup(email: String, pass: String): String? {
+        val error = authRepository.signup(email, pass)
+        if (error == null) _workspaceId.value = authRepository.currentUser.value?.uid
+        return error
     }
 
     fun logout() {

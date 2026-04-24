@@ -62,6 +62,13 @@ class FirestoreRepository {
         db.collection("workspaces").document(workspaceId).collection("expenses").add(expense).await()
     }
 
+    suspend fun deleteExpense(expenseId: String) {
+        val workspaceId = currentWorkspaceId ?: return
+        if (expenseId.isBlank()) return
+        db.collection("workspaces").document(workspaceId)
+            .collection("expenses").document(expenseId).delete().await()
+    }
+
     // ─── Incomes ─────────────────────────────────────────────────────────────
 
     fun getAllIncomes(): Flow<List<Income>> {
@@ -84,6 +91,13 @@ class FirestoreRepository {
     suspend fun insertIncome(income: Income) {
         val workspaceId = currentWorkspaceId ?: return
         db.collection("workspaces").document(workspaceId).collection("incomes").add(income).await()
+    }
+
+    suspend fun deleteIncome(incomeId: String) {
+        val workspaceId = currentWorkspaceId ?: return
+        if (incomeId.isBlank()) return
+        db.collection("workspaces").document(workspaceId)
+            .collection("incomes").document(incomeId).delete().await()
     }
 
     // ─── Budget (global monthly limit) ───────────────────────────────────────

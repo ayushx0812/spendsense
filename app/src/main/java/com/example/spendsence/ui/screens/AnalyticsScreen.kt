@@ -8,6 +8,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,10 +57,19 @@ fun AnalyticsScreen(
         }
     }
 
-    val categoryTotals = expenses.groupBy { it.category }
-        .mapValues { entry -> entry.value.sumOf { it.amount } }
-    
-    val totalExpense = categoryTotals.values.sum()
+    var analyticsType by remember { mutableStateOf("Expense") }
+
+    val sectionTotals: Map<String, Double> = when (analyticsType) {
+        "Expense" -> expenses.groupBy { it.category }
+            .mapValues { entry -> entry.value.sumOf { it.amount } }
+        "Income" -> incomes.groupBy { it.source }
+            .mapValues { entry -> entry.value.sumOf { it.amount } }
+        else -> mapOf(
+            "Income" to incomes.sumOf { it.amount },
+            "Expense" to expenses.sumOf { it.amount }
+        ).filterValues { it > 0.0 }
+    }
+    val totalAmount = sectionTotals.values.sum()
 
     // Assigning colors for pie chart
     val colors = listOf(
@@ -92,15 +104,35 @@ fun AnalyticsScreen(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Expenses by Category", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("Expense", "Income", "Overall").forEach { option ->
+                    FilterChip(
+                        selected = analyticsType == option,
+                        onClick = { analyticsType = option },
+                        label = { Text(option) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val analyticsTitle = when (analyticsType) {
+                "Expense" -> "Expenses by Category"
+                "Income" -> "Income by Source"
+                else -> "Overall (Income + Expense)"
+            }
+            Text(analyticsTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(32.dp))
 
-            if (totalExpense > 0) {
+            if (totalAmount > 0) {
                 Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         var startAngle = 0f
-                        categoryTotals.entries.forEachIndexed { index, entry ->
-                            val sweepAngle = ((entry.value / totalExpense) * 360).toFloat()
+                        sectionTotals.entries.forEachIndexed { index, entry ->
+                            val sweepAngle = ((entry.value / totalAmount) * 360).toFloat()
                             drawArc(
                                 color = colors[index % colors.size],
                                 startAngle = startAngle,
@@ -115,7 +147,7 @@ fun AnalyticsScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 
                 // Legend
-                categoryTotals.entries.forEachIndexed { index, entry ->
+                sectionTotals.entries.forEachIndexed { index, entry ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically

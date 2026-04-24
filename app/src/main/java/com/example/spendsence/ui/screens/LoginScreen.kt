@@ -78,12 +78,12 @@ fun LoginScreen(
                     isLoading = true
                     errorMessage = null
                     coroutineScope.launch {
-                        val success = viewModel.login(email, password)
+                        val error = viewModel.login(email, password)
                         isLoading = false
-                        if (success) {
+                        if (error == null) {
                             onNavigateToDashboard()
                         } else {
-                            errorMessage = "Login failed. Check credentials."
+                            errorMessage = error
                         }
                     }
                 },

@@ -18,9 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.spendsence.data.Transaction
 import com.example.spendsence.ui.theme.ExpenseRed
 import com.example.spendsence.ui.theme.IncomeGreen
 import com.example.spendsence.ui.theme.PrimaryBlue
+import com.example.spendsence.util.FirestoreHelper
 import com.example.spendsence.viewmodel.AppViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -32,7 +34,8 @@ private data class TxRow(
     val amount: Double,
     val isIncome: Boolean,
     val sub: String,
-    val id: String
+    val id: String,
+    val canDelete: Boolean
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,10 +47,20 @@ fun TransactionsScreen(
 ) {
     val allExpenses by viewModel.allExpenses.collectAsState()
     val allIncomes by viewModel.allIncomes.collectAsState()
+    var firebaseTransactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
+
+    DisposableEffect(Unit) {
+        val listener = FirestoreHelper.listenToTransactions(
+            onUpdate = { firebaseTransactions = it },
+            onError = { println("transactions listener error: ${it?.message}") }
+        )
+        onDispose { listener?.remove() }
+    }
 
     var searchQuery by remember { mutableStateOf("") }
     var filterType by remember { mutableStateOf("All") }
     var filterPeriod by remember { mutableStateOf("All Time") }
+    var pendingDelete by remember { mutableStateOf<TxRow?>(null) }
 
     // Bottom sheet state for the + button
     var showAddSheet by remember { mutableStateOf(false) }
@@ -59,11 +72,48 @@ fun TransactionsScreen(
     val currentYear = yearFormat.format(Date())
 
     val combined: List<TxRow> = buildList {
+        firebaseTransactions.forEach { t ->
+            add(
+                TxRow(
+                    dateMillis = t.timestamp,
+                    label = t.merchant,
+                    amount = t.amount,
+                    isIncome = t.type.equals("credit", ignoreCase = true),
+                    sub = "${t.category} • ${t.source}",
+                    id = "cloud_${t.timestamp}_${t.merchant}",
+                    canDelete = false
+                )
+            )
+        }
         if (filterType != "Expense") {
-            allIncomes.forEach { i -> add(TxRow(i.dateMillis, i.source, i.amount, true, i.note, i.id)) }
+            allIncomes.forEach { i ->
+                add(
+                    TxRow(
+                        dateMillis = i.dateMillis,
+                        label = i.source,
+                        amount = i.amount,
+                        isIncome = true,
+                        sub = i.note,
+                        id = i.id,
+                        canDelete = i.id.isNotBlank()
+                    )
+                )
+            }
         }
         if (filterType != "Income") {
-            allExpenses.forEach { e -> add(TxRow(e.dateMillis, e.category, e.amount, false, e.note, e.id)) }
+            allExpenses.forEach { e ->
+                add(
+                    TxRow(
+                        dateMillis = e.dateMillis,
+                        label = e.category,
+                        amount = e.amount,
+                        isIncome = false,
+                        sub = e.note,
+                        id = e.id,
+                        canDelete = e.id.isNotBlank()
+                    )
+                )
+            }
         }
     }.filter { row ->
         val q = searchQuery.lowercase()
@@ -239,6 +289,15 @@ fun TransactionsScreen(
                                     fontSize = 15.sp,
                                     color = if (row.isIncome) IncomeGreen else ExpenseRed
                                 )
+                                if (row.canDelete) {
+                                    IconButton(onClick = { pendingDelete = row }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete transaction",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -379,5 +438,26 @@ fun TransactionsScreen(
                 }
             }
         }
+    }
+
+    if (pendingDelete != null) {
+        val tx = pendingDelete!!
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Delete transaction?") },
+            text = { Text("This will permanently delete this ${if (tx.isIncome) "income" else "expense"} entry.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (tx.isIncome) viewModel.deleteIncome(tx.id) else viewModel.deleteExpense(tx.id)
+                        pendingDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+            }
+        )
     }
 }

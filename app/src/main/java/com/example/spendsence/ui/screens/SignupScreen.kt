@@ -96,12 +96,12 @@ fun SignupScreen(
                     isLoading = true
                     errorMessage = null
                     coroutineScope.launch {
-                        val success = viewModel.signup(email, password)
+                        val error = viewModel.signup(email, password)
                         isLoading = false
-                        if (success) {
+                        if (error == null) {
                             onNavigateToDashboard()
                         } else {
-                            errorMessage = "Signup failed. Email might be in use."
+                            errorMessage = error
                         }
                     }
                 },

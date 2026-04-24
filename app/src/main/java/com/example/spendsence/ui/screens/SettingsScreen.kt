@@ -1,19 +1,28 @@
 package com.example.spendsence.ui.screens
 
+import android.content.Intent
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.spendsence.util.BiometricHelper
 import com.example.spendsence.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,9 +32,37 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogoutSuccess: () -> Unit
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val prefs = context.getSharedPreferences("spendsense_prefs", Context.MODE_PRIVATE)
     val currentUser by viewModel.currentUser.collectAsState()
     val currentWorkspaceId by viewModel.currentWorkspaceIdFlow.collectAsState()
     val isSeeding by viewModel.isSeeding.collectAsState()
+
+    var biometricEnabled by remember {
+        mutableStateOf(prefs.getBoolean("biometric_lock_enabled", false))
+    }
+    var biometricStatus by remember {
+        mutableStateOf(BiometricHelper.getStatus(context))
+    }
+    val biometricAvailable = biometricStatus == BiometricHelper.Status.Available
+
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                biometricStatus = BiometricHelper.getStatus(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(biometricAvailable) {
+        if (!biometricAvailable && biometricEnabled) {
+            biometricEnabled = false
+            prefs.edit().putBoolean("biometric_lock_enabled", false).apply()
+        }
+    }
 
     var shareUid by remember { mutableStateOf("") }
     var showSeedConfirm by remember { mutableStateOf(false) }
@@ -62,6 +99,75 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(24.dp))
 
+            // ── App Lock (Biometric) ───────────────────────────────────────────
+            Text("App Lock", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            when (biometricStatus) {
+                BiometricHelper.Status.Available -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.Fingerprint,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Fingerprint / PIN Lock", fontWeight = FontWeight.Medium)
+                            Text(
+                                "Require biometric or PIN when opening the app",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                        Switch(
+                            checked = biometricEnabled,
+                            onCheckedChange = { enabled ->
+                                biometricEnabled = enabled
+                                prefs.edit().putBoolean("biometric_lock_enabled", enabled).apply()
+                            }
+                        )
+                    }
+                }
+                BiometricHelper.Status.NoneEnrolled -> {
+                    Text(
+                        "Fingerprint or screen lock is not set up on this device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { BiometricHelper.openEnrollmentSettings(context) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Set up fingerprint or PIN")
+                    }
+                }
+                BiometricHelper.Status.NoHardware -> Text(
+                    "This device does not support biometric authentication.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+                BiometricHelper.Status.HardwareUnavailable -> Text(
+                    "Biometric hardware is temporarily unavailable.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+                BiometricHelper.Status.Unsupported -> Text(
+                    "Biometric authentication is not supported on this device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(24.dp))
+
             // ── Demo Data Section ─────────────────────────────────────────────
             Text("Demo Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
@@ -92,6 +198,33 @@ fun SettingsScreen(
                     Spacer(Modifier.width(8.dp))
                     Text("Load Demo Data", color = Color.White, fontWeight = FontWeight.Bold)
                 }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Auto Detection Access ──────────────────────────────────────────
+            Text("Auto Detection", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Enable notification access so SpendSence can auto-detect GPay/Paytm payment messages.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Enable Notification Access")
             }
 
             Spacer(modifier = Modifier.height(24.dp))

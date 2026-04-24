@@ -19,23 +19,35 @@ class AuthRepository {
         }
     }
 
-    suspend fun login(email: String, pass: String): Boolean {
+    /** Returns null on success, or a user-friendly error message on failure. */
+    suspend fun login(email: String, pass: String): String? {
         return try {
             auth.signInWithEmailAndPassword(email, pass).await()
-            true
+            null
+        } catch (e: com.google.firebase.auth.FirebaseAuthInvalidUserException) {
+            "No account found with this email."
+        } catch (e: com.google.firebase.auth.FirebaseAuthInvalidCredentialsException) {
+            "Incorrect password. Please try again."
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            "Login failed. Please check your connection and try again."
         }
     }
 
-    suspend fun signup(email: String, pass: String): Boolean {
+    /** Returns null on success, or a user-friendly error message on failure. */
+    suspend fun signup(email: String, pass: String): String? {
         return try {
             auth.createUserWithEmailAndPassword(email, pass).await()
-            true
+            null
+        } catch (e: com.google.firebase.auth.FirebaseAuthUserCollisionException) {
+            "This email is already registered. Try logging in instead."
+        } catch (e: com.google.firebase.auth.FirebaseAuthWeakPasswordException) {
+            "Password is too weak. Use at least 6 characters."
+        } catch (e: com.google.firebase.auth.FirebaseAuthInvalidCredentialsException) {
+            "Invalid email address format."
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            "Sign up failed. Please check your connection and try again."
         }
     }
 
